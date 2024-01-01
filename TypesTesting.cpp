@@ -222,9 +222,9 @@ void StartServer()
     if (status == SEC_I_CONTINUE_NEEDED) {
         // TODO: Proceed from here. Read more at https://learn.microsoft.com/en-us/windows/win32/secauthn/acceptsecuritycontext--schannel#return-value
         // Basically we need to send token to client then call back AcceptSecurityContext again bla bla bla :)
-        fprintf(stderr, "Need to continue but not implemented ...\n", status);
+        //fprintf(stderr, "Need to continue but not implemented ...\n", status);
 
-        exit(1);
+        //exit(1);
     }
 
     cbOut = outputSecBuffer.cbBuffer;
@@ -236,6 +236,36 @@ void StartServer()
     int bytesSent = send(ClientSocket, (const char*)(g_pOutBuf),cbOut, 0);
 
     fprintf(stderr, "Bytes sent: %lu\n", bytesSent);
+
+
+    // Read back from client
+
+    bytesRead = recv(ClientSocket, buffer, 1024, 0);
+
+    PrintHexDump(bytesRead, (byte*)buffer);
+
+    printf("Bytes read: %d\n", bytesRead);
+
+
+    status = AcceptSecurityContext(
+        &credentialsHandle, // phCredential
+        &context, // phContext
+        &inputSecBufferDesc, // pInput
+        0, // fContextReq
+        SECURITY_NATIVE_DREP, // TargetDataRep
+        nullptr, // phNewContext
+        &outputSecBufferDesc,
+        &contextAttributes,
+        nullptr
+    );
+
+    if (!SEC_SUCCESS(status))
+    {
+        fprintf(stderr, "AcceptSecurityContext failed: 0x%08x\n", status);
+        exit(1);
+    }
+
+    fprintf(stderr, "AcceptSecurityContext succeeded: 0x%08x\n", status);
 
     send(ClientSocket, "Mixa", _countof("Mixa"), 0);
 
@@ -281,7 +311,7 @@ void StartServer()
 
     void* destination = encryptedMessageOutBuffer;
 
-    strcpy_s((char*)(*encryptedMessageOutBuffer + streamSizes.cbHeader), 10, "Mixa");
+    strcpy_s((char*)(encryptedMessageSecBuffers[1].pvBuffer), 5, "Mixa");
 
     status = EncryptMessage(&context, 0, &encryptedMessageSecBufferDesc, 0);
 
@@ -290,6 +320,10 @@ void StartServer()
         fprintf(stderr, "EncryptMessage failed: 0x%08x\n", status);
         exit(1);
     }
+
+    int msgLength = encryptedMessageSecBuffers[0].cbBuffer + encryptedMessageSecBuffers[1].cbBuffer + encryptedMessageSecBuffers[2].cbBuffer;
+
+    send(ClientSocket, (const char*)encryptedMessageOutBuffer, msgLength, 0);
 }
 
 PCCERT_CONTEXT getServerCertificate()
