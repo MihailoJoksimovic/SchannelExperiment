@@ -21,5 +21,11 @@
     <ClCompile Include="TlsClientt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ExistingTlsClient2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".gitignore" />
   </ItemGroup>
 </Project>
